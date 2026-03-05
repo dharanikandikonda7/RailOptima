@@ -1,9 +1,7 @@
 import streamlit as st
 import pandas as pd
-import numpy as np
 import plotly.express as px
 import joblib
-from sklearn.cluster import KMeans
 from utils import (
     calculate_occupancy,
     classify_risk,
@@ -22,28 +20,56 @@ st.set_page_config(
 )
 
 # --------------------------------------------------
-# Custom Enterprise Styling
+# Custom CSS Styling
 # --------------------------------------------------
 st.markdown("""
-    <style>
-        .main {
-            background-color: #f4f6f9;
-        }
-        .block-container {
-            padding-top: 2rem;
-        }
-        h1 {
-            font-size: 28px;
-            font-weight: 600;
-        }
-        h2 {
-            font-size: 20px;
-            font-weight: 500;
-        }
-    </style>
+<style>
+
+.stApp {
+background: linear-gradient(135deg,#eef2ff,#f8fafc);
+}
+
+h1{
+font-size:36px;
+font-weight:700;
+text-align:center;
+color:#1e293b;
+}
+
+.card{
+background:white;
+padding:20px;
+border-radius:14px;
+box-shadow:0 4px 12px rgba(0,0,0,0.08);
+transition:0.2s;
+}
+
+.card:hover{
+transform:translateY(-4px);
+box-shadow:0 8px 18px rgba(0,0,0,0.12);
+}
+
+.metric-card{
+background:linear-gradient(135deg,#6366f1,#4f46e5);
+color:white;
+padding:18px;
+border-radius:12px;
+text-align:center;
+font-size:18px;
+font-weight:600;
+}
+
+.small-card{
+background:white;
+padding:15px;
+border-radius:12px;
+box-shadow:0 3px 8px rgba(0,0,0,0.07);
+}
+
+</style>
 """, unsafe_allow_html=True)
 
-st.title("RailOptima Smart Demand and Resource Planning Dashboard")
+st.title("🚆 RailOptima Smart Demand & Resource Planning")
 
 # --------------------------------------------------
 # Load Data
@@ -66,11 +92,14 @@ def load_model():
 model = load_model()
 
 # --------------------------------------------------
-# Sidebar Filters
+# Sidebar
 # --------------------------------------------------
-st.sidebar.header("Filters")
+st.sidebar.header("⚙️ Filters")
 
-route_selected = st.sidebar.selectbox("Select Route", df["Route"].unique())
+route_selected = st.sidebar.selectbox(
+    "Select Route",
+    df["Route"].unique()
+)
 
 date_range = st.sidebar.date_input(
     "Select Date Range",
@@ -78,147 +107,188 @@ date_range = st.sidebar.date_input(
 )
 
 scenario_boost = st.sidebar.slider(
-    "Scenario Demand Increase (%)",
-    0, 50, 0
+    "Demand Increase Scenario (%)",
+    0,50,0
 )
 
 filtered_df = df[
-    (df["Route"] == route_selected) &
-    (df["Date"] >= pd.to_datetime(date_range[0])) &
-    (df["Date"] <= pd.to_datetime(date_range[1]))
+(df["Route"]==route_selected) &
+(df["Date"]>=pd.to_datetime(date_range[0])) &
+(df["Date"]<=pd.to_datetime(date_range[1]))
 ]
 
 # --------------------------------------------------
-# KPI Section
+# KPI CARDS
 # --------------------------------------------------
-st.subheader("Operational Metrics")
+st.subheader("📊 Operational Overview")
 
-col1, col2, col3, col4 = st.columns(4)
+col1,col2,col3,col4 = st.columns(4)
 
-total_passengers = int(filtered_df["Passenger_Count"].sum())
-avg_occupancy = round(filtered_df["Occupancy_Rate"].mean(), 2)
-high_risk_count = (filtered_df["Occupancy_Rate"] > 90).sum()
-platform_conflicts = detect_platform_conflicts(filtered_df)
+total_passengers=int(filtered_df["Passenger_Count"].sum())
+avg_occupancy=round(filtered_df["Occupancy_Rate"].mean(),2)
+high_risk_count=(filtered_df["Occupancy_Rate"]>90).sum()
+platform_conflicts=detect_platform_conflicts(filtered_df)
 
-col1.metric("Total Passengers", total_passengers)
-col2.metric("Average Occupancy (%)", avg_occupancy)
-col3.metric("High Risk Days", high_risk_count)
-col4.metric("Platform Conflicts", platform_conflicts)
+with col1:
+    st.markdown(f"""
+    <div class="metric-card">
+    👥 Total Passengers<br><br>
+    {total_passengers}
+    </div>
+    """,unsafe_allow_html=True)
+
+with col2:
+    st.markdown(f"""
+    <div class="metric-card">
+    📈 Avg Occupancy<br><br>
+    {avg_occupancy} %
+    </div>
+    """,unsafe_allow_html=True)
+
+with col3:
+    st.markdown(f"""
+    <div class="metric-card">
+    ⚠️ High Risk Days<br><br>
+    {high_risk_count}
+    </div>
+    """,unsafe_allow_html=True)
+
+with col4:
+    st.markdown(f"""
+    <div class="metric-card">
+    🚉 Platform Conflicts<br><br>
+    {platform_conflicts}
+    </div>
+    """,unsafe_allow_html=True)
 
 # --------------------------------------------------
-# Passenger Demand Trend (Line Chart)
+# DEMAND TREND CARD
 # --------------------------------------------------
-st.subheader("Passenger Demand Trend")
+st.subheader("📈 Passenger Demand Trend")
 
-trend_fig = px.line(
-    filtered_df,
-    x="Date",
-    y="Passenger_Count",
-    markers=True,
-    title="Passenger Demand Over Time"
+trend_fig=px.line(
+filtered_df,
+x="Date",
+y="Passenger_Count",
+markers=True,
+template="plotly_white"
 )
 
-st.plotly_chart(trend_fig, use_container_width=True)
+trend_fig.update_layout(height=320)
+
+st.plotly_chart(trend_fig,use_container_width=True)
 
 # --------------------------------------------------
-# Route Demand Comparison (Bar Chart)
+# SIDE BY SIDE CARDS
 # --------------------------------------------------
-st.subheader("Route Demand Comparison")
+st.subheader("📊 Route Insights")
 
-route_summary = df.groupby("Route")["Passenger_Count"].mean().reset_index()
+col1,col2=st.columns(2)
 
-route_fig = px.bar(
+# Bar Chart
+with col1:
+
+    route_summary=df.groupby("Route")["Passenger_Count"].mean().reset_index()
+
+    route_fig=px.bar(
     route_summary,
     x="Route",
     y="Passenger_Count",
     color="Route",
-    title="Average Passenger Demand by Route"
-)
+    template="plotly_white",
+    title="Average Demand by Route"
+    )
 
-st.plotly_chart(route_fig, use_container_width=True)
+    route_fig.update_layout(height=300)
 
-# --------------------------------------------------
-# Occupancy Distribution (Pie Chart)
-# --------------------------------------------------
-st.subheader("Occupancy Distribution")
+    st.plotly_chart(route_fig,use_container_width=True)
 
-occ_counts = filtered_df["Occupancy_Rate"].apply(
-    lambda x: "High (>90%)" if x > 90 else "Normal"
-).value_counts().reset_index()
+# Pie Chart
+with col2:
 
-occ_counts.columns = ["Category", "Count"]
+    occ_counts=filtered_df["Occupancy_Rate"].apply(
+    lambda x:"High (>90%)" if x>90 else "Normal"
+    ).value_counts().reset_index()
 
-pie_fig = px.pie(
+    occ_counts.columns=["Category","Count"]
+
+    pie_fig=px.pie(
     occ_counts,
     names="Category",
     values="Count",
-    title="High vs Normal Occupancy Days"
-)
+    hole=0.45,
+    title="Occupancy Distribution"
+    )
 
-st.plotly_chart(pie_fig, use_container_width=True)
+    pie_fig.update_layout(height=300)
+
+    st.plotly_chart(pie_fig,use_container_width=True)
 
 # --------------------------------------------------
-# Prediction Section
+# FORECAST
 # --------------------------------------------------
-st.subheader("Next 7-Day Demand Forecast")
+st.subheader("🔮 7-Day Passenger Demand Forecast")
 
-latest = filtered_df.iloc[-1]
+latest=filtered_df.iloc[-1]
 
-future_data = pd.DataFrame({
-    "Weekend": [latest["Weekend"]] * 7,
-    "Holiday": [0] * 7,
-    "Peak_Hour": [1] * 7,
-    "Delay_Minutes": [latest["Delay_Minutes"]] * 7,
-    "Number_of_Coaches": [latest["Number_of_Coaches"]] * 7
+future_data=pd.DataFrame({
+"Weekend":[latest["Weekend"]]*7,
+"Holiday":[0]*7,
+"Peak_Hour":[1]*7,
+"Delay_Minutes":[latest["Delay_Minutes"]]*7,
+"Number_of_Coaches":[latest["Number_of_Coaches"]]*7
 })
 
-predictions = model.predict(future_data)
-predictions = predictions * (1 + scenario_boost / 100)
+predictions=model.predict(future_data)
+predictions=predictions*(1+scenario_boost/100)
 
-forecast_df = pd.DataFrame({
-    "Day": [f"Day {i+1}" for i in range(7)],
-    "Predicted_Passengers": predictions
+forecast_df=pd.DataFrame({
+"Day":[f"Day {i+1}" for i in range(7)],
+"Predicted_Passengers":predictions
 })
 
-st.dataframe(forecast_df, use_container_width=True)
+with st.expander("📅 View Forecast Table"):
+    st.dataframe(forecast_df,use_container_width=True)
 
 # --------------------------------------------------
-# Risk Analysis and Recommendations
+# RECOMMENDATIONS
 # --------------------------------------------------
-st.subheader("Operational Recommendations")
+st.subheader("🧠 Operational Recommendations")
 
-latest_capacity = latest["Seat_Capacity"]
-predicted_avg = predictions.mean()
+latest_capacity=latest["Seat_Capacity"]
+predicted_avg=predictions.mean()
 
-predicted_occupancy = calculate_occupancy(predicted_avg, latest_capacity)
-risk_level = classify_risk(predicted_occupancy)
+predicted_occupancy=calculate_occupancy(predicted_avg,latest_capacity)
+risk_level=classify_risk(predicted_occupancy)
 
-conflict_flag = platform_conflicts > 0
-recommendations = recommend_actions(predicted_occupancy, conflict_flag)
+conflict_flag=platform_conflicts>0
+recommendations=recommend_actions(predicted_occupancy,conflict_flag)
 
-st.write(f"Predicted Occupancy: {round(predicted_occupancy, 2)} percent")
-st.write(f"Risk Level: {risk_level}")
+st.info(f"Predicted Occupancy: {round(predicted_occupancy,2)} %")
+st.warning(f"Risk Level: {risk_level}")
 
 for rec in recommendations:
-    st.write(rec)
+    st.markdown(f"✔️ {rec}")
 
 # --------------------------------------------------
-# Efficiency Score
+# EFFICIENCY SCORE
 # --------------------------------------------------
-st.subheader("Resource Efficiency Score")
+st.subheader("⚡ Resource Efficiency Score")
 
-overcrowding_penalty = max(0, predicted_occupancy - 85)
-conflict_penalty = platform_conflicts * 5
+overcrowding_penalty=max(0,predicted_occupancy-85)
+conflict_penalty=platform_conflicts*5
 
-efficiency_score = calculate_efficiency_score(
-    predicted_occupancy,
-    overcrowding_penalty,
-    conflict_penalty
+efficiency_score=calculate_efficiency_score(
+predicted_occupancy,
+overcrowding_penalty,
+conflict_penalty
 )
 
-if efficiency_score >= 80:
+st.progress(int(efficiency_score))
+
+if efficiency_score>=80:
     st.success(f"Efficiency Score: {round(efficiency_score,2)} (Excellent)")
-elif efficiency_score >= 60:
+elif efficiency_score>=60:
     st.warning(f"Efficiency Score: {round(efficiency_score,2)} (Moderate)")
 else:
     st.error(f"Efficiency Score: {round(efficiency_score,2)} (Poor)")
