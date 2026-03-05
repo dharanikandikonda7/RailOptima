@@ -120,8 +120,8 @@ RailOptima/
 ## Installation and Setup
 
 Step 1: Clone the repository
-git clone <repository_url>
-cd RailOptima
+git clone https://github.com/dharanikandikonda7/RailOptima.git
+
 
 Step 2: Install dependencies
 - pip install -r requirements.txt

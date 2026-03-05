@@ -106,7 +106,7 @@ col3.metric("High Risk Days", high_risk_count)
 col4.metric("Platform Conflicts", platform_conflicts)
 
 # --------------------------------------------------
-# Demand Trend Visualization
+# Passenger Demand Trend (Line Chart)
 # --------------------------------------------------
 st.subheader("Passenger Demand Trend")
 
@@ -114,39 +114,48 @@ trend_fig = px.line(
     filtered_df,
     x="Date",
     y="Passenger_Count",
+    markers=True,
     title="Passenger Demand Over Time"
 )
 
 st.plotly_chart(trend_fig, use_container_width=True)
 
 # --------------------------------------------------
-# Advanced Feature: Route Clustering
+# Route Demand Comparison (Bar Chart)
 # --------------------------------------------------
-st.subheader("Route Performance Clustering")
+st.subheader("Route Demand Comparison")
 
-cluster_df = df.groupby("Route").agg({
-    "Passenger_Count": "mean",
-    "Occupancy_Rate": "mean",
-    "Delay_Minutes": "mean"
-}).reset_index()
+route_summary = df.groupby("Route")["Passenger_Count"].mean().reset_index()
 
-kmeans = KMeans(n_clusters=3, random_state=42)
-cluster_df["Cluster"] = kmeans.fit_predict(
-    cluster_df[["Passenger_Count", "Occupancy_Rate", "Delay_Minutes"]]
+route_fig = px.bar(
+    route_summary,
+    x="Route",
+    y="Passenger_Count",
+    color="Route",
+    title="Average Passenger Demand by Route"
 )
 
-cluster_fig = px.scatter(
-    cluster_df,
-    x="Passenger_Count",
-    y="Occupancy_Rate",
-    color=cluster_df["Cluster"].astype(str),
-    hover_name="Route",
-    title="Route Segmentation Based on Demand and Occupancy"
+st.plotly_chart(route_fig, use_container_width=True)
+
+# --------------------------------------------------
+# Occupancy Distribution (Pie Chart)
+# --------------------------------------------------
+st.subheader("Occupancy Distribution")
+
+occ_counts = filtered_df["Occupancy_Rate"].apply(
+    lambda x: "High (>90%)" if x > 90 else "Normal"
+).value_counts().reset_index()
+
+occ_counts.columns = ["Category", "Count"]
+
+pie_fig = px.pie(
+    occ_counts,
+    names="Category",
+    values="Count",
+    title="High vs Normal Occupancy Days"
 )
 
-st.plotly_chart(cluster_fig, use_container_width=True)
-
-st.write("Cluster 0, 1, and 2 represent low, medium, and high demand route segments based on operational characteristics.")
+st.plotly_chart(pie_fig, use_container_width=True)
 
 # --------------------------------------------------
 # Prediction Section
